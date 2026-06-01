@@ -119,12 +119,18 @@ else
     warn "  brew install sshpass   # then re-run ./minerva-setup.sh"
   fi
 fi
-if command -v sshfs >/dev/null 2>&1 || [[ -x "$BREW_PREFIX/bin/sshfs" ]]; then ok "FUSE-T sshfs present"
+HAVE_SSHFS=0
+if command -v sshfs >/dev/null 2>&1 || [[ -x "$BREW_PREFIX/bin/sshfs" ]]; then HAVE_SSHFS=1; ok "FUSE-T sshfs present"
 else
   info "installing FUSE-T (may prompt for your Mac password / a macOS approval)…"
   brew tap macos-fuse-t/cask >/dev/null 2>&1 || true
-  brew install --cask fuse-t fuse-t-sshfs || die "FUSE-T install failed. Install it manually, then re-run."
-  ok "FUSE-T installed"
+  if brew install --cask fuse-t fuse-t-sshfs; then HAVE_SSHFS=1; ok "FUSE-T installed"
+  else
+    warn "Could not install FUSE-T automatically — continuing without it."
+    warn "Logins will still work; only the ~/minerva mount is disabled until you run:"
+    warn "  brew tap macos-fuse-t/cask && brew install --cask fuse-t fuse-t-sshfs"
+    warn "then re-run ./minerva-setup.sh  (needs admin rights on this Mac)."
+  fi
 fi
 
 # ---- secrets ----------------------------------------------------------------
@@ -225,8 +231,12 @@ echo
 bold "Done. Next steps:"
 info "1. Open a new terminal tab  (or:  source ~/.zshrc)"
 info "2. Log in:    minerva13      → approve the MFA push on your phone"
-info "3. Mount:     minerva-mount"
-info "4. Check:     minerva-status   (HEALTHY?)  •  browse ~/minerva in Finder"
+if (( HAVE_SSHFS )); then
+  info "3. Mount:     minerva-mount"
+  info "4. Check:     minerva-status   (HEALTHY?)  •  browse ~/minerva in Finder"
+else
+  info "3. (mount disabled — install FUSE-T per the note above, then re-run, to enable ~/minerva)"
+fi
 echo
 info "Diagnose anytime: minerva-status   •   Recover a wedged mount: minerva-clear"
 info "Change settings:  edit ~/.config/minerva/minerva.conf   •   New password: minerva-update-password"
