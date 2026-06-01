@@ -1,8 +1,20 @@
-# minerva-mac-setup
+# minerva-hpc-setup
 
-One-command setup for **Minerva (Sinai HPC)** on macOS — Apple Silicon or Intel.
-It prompts **you** for your own username and password (nothing is baked in), then
-wires up logins, a long-lived passwordless session, and an on-demand Finder mount.
+One-command setup for **Minerva (Sinai HPC)** convenience tooling — SSH logins
+with a long-lived passwordless session, MFA, and an on-demand network mount.
+It prompts **you** for your own username and password; nothing is baked in.
+
+## Pick your OS
+
+| Your machine | Where to go | Status |
+| --- | --- | --- |
+| **macOS** (Apple Silicon or Intel) | this folder — instructions below | ✅ tested |
+| **Linux / WSL2** | [`linux/`](linux/) | ⚠️ untested draft |
+| **Windows** (Explorer drive) | [`windows/`](windows/) | ⚠️ untested draft |
+
+---
+
+# macOS
 
 ## What you get
 
@@ -19,15 +31,15 @@ wires up logins, a long-lived passwordless session, and an on-demand Finder moun
 ## Requirements
 
 - macOS with [Homebrew](https://brew.sh) installed. Everything else (`sshpass`,
-  FUSE-T) is installed for you. FUSE-T may ask for your Mac password / a one-time
-  macOS approval.
+  FUSE-T) is installed for you — and if a dependency can't be installed, the setup
+  continues anyway (logins still work; only the mount needs FUSE-T).
 - A Sinai HPC (Minerva) account with SSO password + MFA (MS Authenticator).
 
 ## Install
 
 ```sh
-git clone https://github.com/iamakhilverma/minerva-mac-setup.git
-cd minerva-mac-setup
+git clone https://github.com/iamakhilverma/minerva-hpc-setup.git
+cd minerva-hpc-setup
 ./minerva-setup.sh            # interactive — prompts for everything
 # or:
 ./minerva-setup.sh --defaults # accept all recommended defaults (still prompts for username + password)
@@ -87,7 +99,7 @@ rm -rf ~/.config/minerva
 
 ## Troubleshoot
 
-- *"Could not install sshpass"* → it's optional. The installer now falls back to
+- *"Could not install sshpass"* → it's optional. The installer falls back to
   plain `ssh` logins (you type your password once per session). To get auto-fill,
   run `brew install sshpass` (it's in homebrew-core now) and re-run the installer.
 - `minerva-mount` says *"no live Minerva SSH master"* → log into a node first
