@@ -84,8 +84,12 @@ else
   done
 fi
 echo; bold "Settings (Enter = recommended default)"
-ask MMOUNT  "Local mountpoint" "$HOME/minerva"
-ask MREMOTE "Remote path (blank = your Minerva home)" ""
+info "• Local mountpoint = a folder on THIS machine where the Minerva tree appears."
+info "• Remote path = which folder ON MINERVA to mount there (blank = your home dir)."
+info "    example remote path:  /sc/arion/projects/Smith_Lab/users/jdoe"
+info "    i.e. the form:         /sc/arion/projects/<your-lab>/users/<your-username>"
+ask MMOUNT  "Local mountpoint (folder on this machine)" "$HOME/minerva"
+ask MREMOTE "Remote path on Minerva (blank = home, e.g. /sc/arion/projects/<lab>/users/<you>)" ""
 ask MPERSIST "Keep the login alive for how many hours" "8"
 [[ "$MPERSIST" =~ ^[0-9]+$ ]] || die "Hours must be a whole number."
 

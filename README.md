@@ -52,7 +52,7 @@ You'll be asked for (recommended defaults in brackets):
 | Sinai HPC username | — | required, e.g. `smithj01` |
 | SSO password | — | entered twice, hidden; saved to `~/.minerva_password` (mode 0600) |
 | Local mountpoint | `~/minerva` | where the Finder mount appears |
-| Remote path | *your Minerva home* | blank = home dir; or e.g. a lab project path |
+| Remote path | *your Minerva home* | blank = home dir, or a lab path like `/sc/arion/projects/Smith_Lab/users/jdoe` (form: `/sc/arion/projects/<lab>/users/<you>`) |
 | Login persists | `8` hours | the passwordless `ControlMaster` window |
 
 Then open a new terminal and:
