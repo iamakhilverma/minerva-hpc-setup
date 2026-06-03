@@ -34,11 +34,26 @@ write_block(){ local file="$1" content="$2" tmp; touch "$file"; tmp="$(mktemp)"
   { cat "$tmp"; printf '%s\n%s\n%s\n' "$BEGIN" "$content" "$END"; } >"$file.new"
   mv "$file.new" "$file"; rm -f "$tmp"; }
 
+# True if PATH (or, if it doesn't exist yet, its nearest existing ancestor) is writable.
+path_writable() { local p="$1"; while [ ! -e "$p" ]; do p="$(dirname "$p")"; done; [ -w "$p" ]; }
+
 bold "Minerva setup (Linux / WSL2)"; echo
 [[ "$(uname -s)" == "Linux" ]] || die "This installer is for Linux/WSL. On macOS use minerva-setup.sh."
 IS_WSL=0; grep -qi microsoft /proc/version 2>/dev/null && { IS_WSL=1; ok "WSL2 detected"; }
 command -v apt-get >/dev/null 2>&1 || warn "This installer assumes apt (Debian/Ubuntu). Install sshpass+sshfs your way, then it'll detect them."
 [[ -f "$SCRIPT_DIR/minerva-mount-linux.sh" ]] || die "minerva-mount-linux.sh not found next to this script."
+
+# Catch a home folder with root-owned files UP FRONT — one fix instead of many.
+unwritable=()
+for t in "$HOME" "$HOME/.bashrc" "$HOME/.zshrc" "$HOME/.config" "$HOME/.local" "$HOME/.ssh"; do
+  [ -e "$t" ] || continue          # only existing-but-unwritable paths matter here
+  path_writable "$t" || unwritable+=("${t/#$HOME/~}")
+done
+if (( ${#unwritable[@]} )); then
+  die "Not writable by you (likely root-owned): ${unwritable[*]}
+   Your home folder has ownership issues. Fix it all at once, then re-run:
+     sudo chown -R \"\$(whoami)\" \"\$HOME\""
+fi
 
 # ---- dependencies (HYBRID: detect -> show command -> offer to run -> degrade) --
 echo; bold "Dependencies"
