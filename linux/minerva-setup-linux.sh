@@ -99,9 +99,14 @@ info "remote path:    ${MREMOTE:-<your Minerva home>}"; info "login persists: ${
 info "files touched:  ~/.ssh/config, ~/.bashrc and/or ~/.zshrc, ~/.local/bin/minerva-mount.sh, ~/.config/minerva/minerva.conf"
 if (( ! USE_DEFAULTS )); then read -r -p "Proceed? [Y/n]: " GO || true; [[ "${GO:-Y}" =~ ^[Yy]?$ ]] || die "Aborted."; fi
 
-# ---- write config -----------------------------------------------------------
+# ---- write config (fail fast with guidance if ~/.config or ~/.local is root-owned) --
 echo; bold "Writing config"
-mkdir -p "$HOME/.config/minerva" "$HOME/.local/bin" "$HOME/.ssh/sockets" "$MMOUNT" "$HOME/.local/state/minerva"
+if ! mkdir -p "$HOME/.config/minerva" "$HOME/.local/bin" "$HOME/.local/state/minerva" 2>/dev/null; then
+  die "Can't create ~/.config or ~/.local — not writable by you (often root-owned).
+   Fix it, then re-run this installer:
+     sudo chown -R \"\$(whoami)\" ~/.config ~/.local && chmod u+rwx ~/.config ~/.local"
+fi
+mkdir -p "$HOME/.ssh/sockets" "$MMOUNT"
 chmod 700 "$HOME/.ssh/sockets"
 if [[ -n "${PW1:-}" ]]; then ( umask 077; printf '%s\n' "$PW1" >"$PWFILE" ); chmod 600 "$PWFILE"; ok "password saved to $PWFILE (0600)"; fi
 unset PW1 PW2 || true

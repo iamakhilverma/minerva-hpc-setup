@@ -99,6 +99,9 @@ rm -rf ~/.config/minerva
 
 ## Troubleshoot
 
+- *"mkdir: ~/.config/...: Permission denied"* → your `~/.config` is owned by root
+  (some tool created it under `sudo`). Fix, then re-run:
+  `sudo chown -R "$(whoami)" ~/.config && chmod u+rwx ~/.config`
 - *"Could not install sshpass"* → it's optional. The installer falls back to
   plain `ssh` logins (you type your password once per session). To get auto-fill,
   run `brew install sshpass` (it's in homebrew-core now) and re-run the installer.
