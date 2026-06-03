@@ -39,8 +39,11 @@ CONFIG="${MINERVA_CONFIG:-$HOME/.config/minerva/minerva.conf}"
 MOUNT="${MINERVA_MOUNT:-$HOME/minerva}"
 REMOTE_PATH="${MINERVA_REMOTE_PATH:-}"
 LOG="${MINERVA_LOG:-$HOME/Library/Logs/minerva-mount.log}"
-CANDIDATES=( "${MINERVA_NODES[@]}" )
-(( ${#CANDIDATES[@]} )) || CANDIDATES=(minerva13 minerva11 minerva12 minerva14 minerva)
+if (( ${+MINERVA_NODES} )) && (( ${#MINERVA_NODES[@]} )); then
+  CANDIDATES=( "${MINERVA_NODES[@]}" )
+else
+  CANDIDATES=(minerva13 minerva11 minerva12 minerva14 minerva)
+fi
 MOUNT_TIMEOUT=20   # seconds; sshfs must establish the mount within this window
 CLEAR_TIMEOUT=15   # seconds; a single unmount attempt must return within this
 
@@ -51,7 +54,16 @@ if [[ -z "$SSHFS" ]]; then
   for p in /opt/homebrew/bin/sshfs /usr/local/bin/sshfs; do [[ -x "$p" ]] && { SSHFS="$p"; break; }; done
 fi
 
-MODE="${1:-mount}"
+# Args: [mode] [mountpoint] [remote_path].  mode ∈ {mount,status,clear}, default
+# mount. Pass a mountpoint (+ remote path) to manage a SECOND directory, e.g.:
+#   minerva-mount  ~/minerva-crc  /sc/arion/projects/<lab>/users/<you>/crc_atlas
+#   minerva-status ~/minerva-crc   •   minerva-clear ~/minerva-crc
+# With no mountpoint, the configured primary (MINERVA_MOUNT) is used as before.
+case "${1:-}" in
+  mount|status|clear) MODE="$1"; shift ;;
+  *)                  MODE="mount" ;;
+esac
+[[ -n "${1:-}" ]] && { MOUNT="$1"; REMOTE_PATH="${2:-}"; }
 mkdir -p "$MOUNT" "$(dirname "$LOG")"
 
 log_line() { print -- "$@" >>"$LOG"; }
@@ -197,7 +209,7 @@ print -- "mounting via live master on $NODE (remote: '${REMOTE_PATH:-<home>}')"
   -o reconnect \
   -o defer_permissions \
   -o noappledouble \
-  -o volname=minerva \
+  -o volname="$(basename "$MOUNT")" \
   -o cache=yes \
   -o cache_timeout=300 \
   -o cache_stat_timeout=300 \
