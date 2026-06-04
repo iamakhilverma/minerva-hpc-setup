@@ -84,8 +84,12 @@ else
 fi
 
 echo; bold "Settings (press Enter to accept the recommended default)"
-ask MMOUNT  "Local mountpoint" "$HOME/minerva"
-ask MREMOTE "Remote path to mount (blank = your Minerva home directory)" ""
+info "• Local mountpoint = a folder on THIS Mac where Minerva shows up in Finder."
+info "• Remote path = which folder ON MINERVA to show there (blank = your home dir)."
+info "    example remote path:  /sc/arion/projects/Smith_Lab/users/jdoe"
+info "    i.e. the form:         /sc/arion/projects/<your-lab>/users/<your-username>"
+ask MMOUNT  "Local mountpoint (folder on this Mac)" "$HOME/minerva"
+ask MREMOTE "Remote path on Minerva (blank = home, e.g. /sc/arion/projects/<lab>/users/<you>)" ""
 ask MPERSIST "Keep the login alive (passwordless) for how many hours" "8"
 [[ "$MPERSIST" =~ ^[0-9]+$ ]] || die "Hours must be a whole number (got '$MPERSIST')."
 
