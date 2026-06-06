@@ -137,8 +137,17 @@ else
   fi
 fi
 
-# ---- secrets ----------------------------------------------------------------
+# ---- writable dirs (fail fast with guidance if ~/.config is root-owned) ------
 echo; bold "Writing config"
+if ! mkdir -p "$HOME/.config/minerva" 2>/dev/null; then
+  die "Can't create ~/.config/minerva — '$HOME/.config' isn't writable by you (often root-owned).
+   Fix it, then re-run this installer:
+     sudo chown -R \"\$(whoami)\" ~/.config && chmod u+rwx ~/.config"
+fi
+mkdir -p "$HOME/bin" "$HOME/.ssh/sockets" "$MMOUNT"
+chmod 700 "$HOME/.ssh/sockets"
+
+# ---- secrets ----------------------------------------------------------------
 if [[ -n "${PW1:-}" ]]; then
   ( umask 077; printf '%s\n' "$PW1" >"$PWFILE" ); chmod 600 "$PWFILE"
   ok "password saved to $PWFILE (0600)"
@@ -146,8 +155,6 @@ fi
 unset PW1 PW2 || true
 
 # ---- config file ------------------------------------------------------------
-mkdir -p "$HOME/.config/minerva" "$HOME/bin" "$HOME/.ssh/sockets" "$MMOUNT"
-chmod 700 "$HOME/.ssh/sockets"
 cat >"$HOME/.config/minerva/minerva.conf" <<EOF
 # Minerva tooling settings — edit freely, then open a new shell.
 MINERVA_USER="$MUSER"
