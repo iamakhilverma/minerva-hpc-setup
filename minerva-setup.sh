@@ -50,6 +50,9 @@ write_block() {
   mv "$file.new" "$file"; rm -f "$tmp"
 }
 
+# True if PATH (or, if it doesn't exist yet, its nearest existing ancestor) is writable.
+path_writable() { local p="$1"; while [ ! -e "$p" ]; do p="$(dirname "$p")"; done; [ -w "$p" ]; }
+
 bold "Minerva setup"
 echo
 
@@ -63,6 +66,17 @@ fi
 BREW_PREFIX="$(brew --prefix)"
 ok "Homebrew at $BREW_PREFIX ($(uname -m))"
 [[ -f "$SCRIPT_DIR/minerva-mount.sh" ]] || die "minerva-mount.sh not found next to this script ($SCRIPT_DIR)."
+
+# Catch a home folder with root-owned files UP FRONT — one fix instead of many.
+unwritable=()
+for t in "$HOME" "$HOME/.zshrc" "$HOME/.config" "$HOME/.ssh"; do
+  path_writable "$t" || unwritable+=("${t/#$HOME/~}")
+done
+if (( ${#unwritable[@]} )); then
+  die "Not writable by you (likely root-owned): ${unwritable[*]}
+   Your home folder has ownership issues. Fix it all at once, then re-run:
+     sudo chown -R \"\$(whoami)\" \"\$HOME\""
+fi
 
 # ---- prompts ----------------------------------------------------------------
 echo; bold "Your Minerva account"
