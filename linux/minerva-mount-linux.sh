@@ -29,7 +29,13 @@ MOUNT_TIMEOUT=20
 CLEAR_TIMEOUT=15
 
 SSHFS="$(command -v sshfs 2>/dev/null || true)"
-MODE="${1:-mount}"
+# Args: [mode] [mountpoint] [remote_path]. Pass a mountpoint (+ remote) to manage a
+# SECOND directory, e.g.:  minerva-mount ~/minerva-crc /sc/arion/.../crc_atlas
+case "${1:-}" in
+  mount|status|clear) MODE="$1"; shift ;;
+  *)                  MODE="mount" ;;
+esac
+[ -n "${1:-}" ] && { MOUNT="$1"; REMOTE_PATH="${2:-}"; }
 mkdir -p "$MOUNT" "$(dirname "$LOG")"
 
 log_line() { printf '%s\n' "$*" >>"$LOG"; }

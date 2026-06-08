@@ -63,6 +63,24 @@ minerva-mount    # mount ~/minerva (reuses that master)
 minerva-status   # HEALTHY?  Then browse ~/minerva in Finder.
 ```
 
+## Mount a second directory
+
+Working in two places at once? Pass a mountpoint + remote path to mount another
+folder alongside the primary `~/minerva`:
+
+```sh
+minerva-mount  ~/minerva-crc  /sc/arion/projects/Smith_Lab/users/jdoe/crc_atlas
+minerva-status ~/minerva-crc          # check just that one
+minerva-clear  ~/minerva-crc          # unmount just that one
+```
+
+`minerva-mount` with no arguments still manages your primary `~/minerva`. To make a
+second mount a one-word command, add an alias to `~/.zshrc`:
+
+```sh
+alias minerva-crc='minerva-mount ~/minerva-crc /sc/arion/projects/Smith_Lab/users/jdoe/crc_atlas'
+```
+
 ## How it's wired
 
 - **Code is identical for everyone**; only settings differ. All settings live in
