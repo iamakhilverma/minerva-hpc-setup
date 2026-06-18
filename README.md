@@ -128,3 +128,35 @@ rm -rf ~/.config/minerva
 - `~/minerva` looks stuck → `minerva-status` (safe, never hangs). If `PHANTOM`,
   run `minerva-clear`, then `minerva-mount`. You never need to reboot.
 - Logs: `~/Library/Logs/minerva-mount.log`.
+
+## Notes — using VS Code with Minerva (optional)
+
+*Only relevant if you use VS Code Remote-SSH. These are recommendations — the
+installer changes none of this.*
+
+Minerva caps each user to **256 processes per login node** (512 hard). VS Code's
+Remote-SSH server spawns many processes and leaves orphans behind on unclean
+disconnects (sleep, network drops), so they pile up past the cap — you'll see
+`fork: Resource temporarily unavailable` (even `ll` can fail) and Remote-SSH stops
+connecting. To keep it working:
+
+- **Raise your limit.** Put this as the *first* line of your Minerva `~/.bashrc`,
+  above any non-interactive `return` guard so VS Code's server inherits it too:
+  ```sh
+  ulimit -Su 512   # 256 → 512, the hard cap
+  ```
+- **Close cleanly:** Command Palette → *"Remote-SSH: Kill VS Code Server on Host"*
+  when done. The orphans come from unclean disconnects, not normal use.
+- **Trim the footprint:** disable remote extensions you don't need (each language
+  server = processes), use one window, and exclude big trees from the file watcher
+  in the remote `settings.json`:
+  ```jsonc
+  "files.watcherExclude": { "**/.git/**": true, "**/conda/**": true, "**/data/**": true }
+  ```
+- **Already wedged?** From your machine:
+  `ssh -o ControlPath=none <user>@minerva.hpc.mssm.edu 'pkill -9 -u "$USER" -f vscode-server'`
+  (or email hpchelp@mssm.edu to clear them).
+- **Just browsing/editing the file tree?** Open `~/minerva` as a **local** folder in
+  VS Code — it reads through the mount with **zero** processes on Minerva.
+- For heavy work, the robust path is Remote-SSH onto a **compute node** (interactive
+  LSF job), not the login node — see Minerva's docs.
