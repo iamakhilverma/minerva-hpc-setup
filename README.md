@@ -160,3 +160,36 @@ connecting. To keep it working:
   VS Code — it reads through the mount with **zero** processes on Minerva.
 - For heavy work, the robust path is Remote-SSH onto a **compute node** (interactive
   LSF job), not the login node — see Minerva's docs.
+
+## Notes — Claude Code login on Minerva (headless, optional)
+
+*Only relevant if you run Claude Code on a Minerva login node. The installer
+changes none of this.*
+
+The browser-based `claude` login often fails over SSH on a headless node — the
+OAuth link can return **"Invalid OAuth Request — Unknown scope: user:session"**.
+The reliable fix is to skip the in-browser handshake entirely and authenticate
+with a pre-generated token (requires a Claude Pro/Max account):
+
+1. **On your laptop** (where a browser opens normally), in a *plain terminal*
+   — not backgrounded — run:
+   ```sh
+   claude setup-token
+   ```
+   Approve in the browser, then copy the token it prints (looks like
+   `sk-ant-oat01-…`). It must run in the foreground so the token is visible.
+2. **On Minerva**, save it to your shell profile so it persists across logins:
+   ```sh
+   echo 'export CLAUDE_CODE_OAUTH_TOKEN="sk-ant-oat01-PASTE-YOURS-HERE"' >> ~/.bashrc
+   source ~/.bashrc
+   echo "$CLAUDE_CODE_OAUTH_TOKEN"   # confirm it's set
+   ```
+3. **Launch:** `claude` — it reads the token from the environment and skips the
+   login link. Run `/status` inside Claude to confirm you're authenticated.
+
+Notes:
+- This is *not* a version bug — it happens even on the latest `claude` (check
+  `claude --version`), so reinstalling won't help. The token path sidesteps it.
+- **Treat the token like a password.** Don't commit it to any repo or shared
+  script. To revoke a token, manage active sessions/tokens in your Anthropic
+  account settings (claude.ai → Settings), then generate a fresh one.
