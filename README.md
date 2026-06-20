@@ -177,19 +177,41 @@ with a pre-generated token (requires a Claude Pro/Max account):
    claude setup-token
    ```
    Approve in the browser, then copy the token it prints (looks like
-   `sk-ant-oat01-…`). It must run in the foreground so the token is visible.
-2. **On Minerva**, save it to your shell profile so it persists across logins:
+   `sk-ant-oat01-…`, ~108 chars). It must run in the *foreground* so the token
+   actually prints — backgrounding it loses the token.
+2. **On Minerva**, save the token to `~/.bash_profile` — **not** `~/.bashrc`.
+   SSH login shells read `~/.bash_profile`; `~/.bashrc` is skipped on login, so a
+   token placed there is silently absent in fresh sessions (→ 401):
    ```sh
-   echo 'export CLAUDE_CODE_OAUTH_TOKEN="sk-ant-oat01-PASTE-YOURS-HERE"' >> ~/.bashrc
-   source ~/.bashrc
-   echo "$CLAUDE_CODE_OAUTH_TOKEN"   # confirm it's set
+   echo 'export CLAUDE_CODE_OAUTH_TOKEN="sk-ant-oat01-PASTE-YOURS-HERE"' >> ~/.bash_profile
+   # make a login shell also pull in ~/.bashrc, so every shell type gets the token:
+   grep -q 'bashrc' ~/.bash_profile || echo '[ -f ~/.bashrc ] && . ~/.bashrc' >> ~/.bash_profile
+   source ~/.bash_profile
+   echo "len=${#CLAUDE_CODE_OAUTH_TOKEN}"   # must print len=108
    ```
-3. **Launch:** `claude` — it reads the token from the environment and skips the
-   login link. Run `/status` inside Claude to confirm you're authenticated.
+3. **Clear any stale stored credential.** A leftover `~/.claude/.credentials.json`
+   from earlier failed `/login` attempts *shadows* the env token and keeps the
+   401 coming even when the token is valid and present. Move it aside:
+   ```sh
+   [ -f ~/.claude/.credentials.json ] && mv ~/.claude/.credentials.json ~/.claude/.credentials.json.bak
+   ```
+4. **Launch:** `claude` — it reads the token from the environment and skips the
+   login link. Confirm persistence across a fresh login (without logging out):
+   ```sh
+   bash -lc 'echo "fresh login sees len=${#CLAUDE_CODE_OAUTH_TOKEN}"'   # want len=108
+   ```
+   After this, your routine is just: SSH in → `claude`.
 
 Notes:
 - This is *not* a version bug — it happens even on the latest `claude` (check
-  `claude --version`), so reinstalling won't help. The token path sidesteps it.
+  `claude --version`), so **reinstalling won't help** (it also leaves `~/.claude`
+  untouched, where the stale credential lives). The token path sidesteps it.
+- The 401 shows as **"Invalid API key · Please run /login"** even though you used
+  a *token*, not an API key — Claude prints that generic message for any 401.
+  It does **not** mean an API key is configured.
+- With token auth, `/status` shows a leaner panel than an interactive login does.
+  That's expected — same access, different display.
 - **Treat the token like a password.** Don't commit it to any repo or shared
   script. To revoke a token, manage active sessions/tokens in your Anthropic
-  account settings (claude.ai → Settings), then generate a fresh one.
+  account settings (claude.ai → Settings → Claude Code), then generate a fresh one.
+  Note: generating a new token does *not* invalidate old ones — revoke explicitly.
