@@ -240,8 +240,11 @@ ask MPERSIST "Keep the login alive (passwordless) for how many hours" "${PRIOR_P
 echo; bold "Scratch mount (optional)"
 info "Minerva scratch is always /sc/arion/scratch/<username>."
 SMOUNT=""; SREMOTE=""
-_scratch_default_yes="Y"; [[ -r "$CONF" && -z "$PRIOR_SCRATCH" ]] && _scratch_default_yes="N"
-if yesno "Also set up a scratch mount? [${_scratch_default_yes}/n]:" "$_scratch_default_yes"; then
+# Default to No only if a prior config exists but had no scratch (respect that
+# earlier choice); otherwise default Yes. Label marks the non-default in lowercase.
+if [[ -r "$CONF" && -z "$PRIOR_SCRATCH" ]]; then _scratch_def="N"; _scratch_label="[y/N]"
+else _scratch_def="Y"; _scratch_label="[Y/n]"; fi
+if yesno "Also set up a scratch mount? ${_scratch_label}:" "$_scratch_def"; then
   ask SMOUNT "Local mountpoint for scratch" "${PRIOR_SCRATCH:-$HOME/minerva-scratch}"
   SREMOTE="/sc/arion/scratch/$MUSER/"
   info "scratch remote → $SREMOTE"
