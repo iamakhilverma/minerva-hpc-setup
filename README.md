@@ -24,9 +24,13 @@ It prompts **you** for your own username and password; nothing is baked in.
 - `minerva-mount` / `minerva-status` / `minerva-clear` — an **on-demand** FUSE-T
   mount of your Minerva tree at `~/minerva`, with a phantom-proof health check
   (`status` never touches the filesystem, so it can't hang; `clear` recovers a
-  wedged mount without a reboot).
+  wedged mount without a reboot). With no args these act on your primary mount
+  **and** your scratch mount (if you set one up).
+- `minerva-scratch` — mount just your scratch tree (`/sc/arion/scratch/<you>`).
 - `mpull` / `mpush` / `mput` / `mget` — rsync/scp helpers against your tree.
 - `minerva-update-password` — rotate the saved password.
+- `minerva-forget` / `minerva-uninstall` — wipe saved credentials, or remove the
+  whole setup and restore your shell (see [Credentials & uninstall](#credentials--uninstall)).
 
 ## Requirements
 
@@ -49,11 +53,18 @@ You'll be asked for (recommended defaults in brackets):
 
 | Prompt | Default | Notes |
 | --- | --- | --- |
-| Sinai HPC username | — | required, e.g. `smithj01` |
-| SSO password | — | entered twice, hidden; saved to `~/.minerva_password` (mode 0600) |
+| Sinai HPC username | *last used* | required first time, e.g. `smithj01` |
+| SSO password | *kept if saved* | entered twice, hidden; saved to `~/.minerva_password` (mode 0600) |
 | Local mountpoint | `~/minerva` | where the Finder mount appears |
 | Remote path | *your Minerva home* | blank = home dir, or a lab path like `/sc/arion/projects/Smith_Lab/users/jdoe` (form: `/sc/arion/projects/<lab>/users/<you>`) |
+| Scratch mount | `~/minerva-scratch` | optional; remote is derived as `/sc/arion/scratch/<you>` — you only pick the local folder |
 | Login persists | `8` hours | the passwordless `ControlMaster` window |
+
+**Re-running is smart:** the installer detects a previous setup and offers your
+saved values back as defaults — press Enter to keep each, including a saved
+password (shown fixed-width masked, never its length or characters). Before it
+edits `~/.zshrc` and `~/.ssh/config` it backs them up to timestamped
+`.minerva-bak.<stamp>` files, so any change is reversible.
 
 Then open a new terminal and:
 
@@ -106,14 +117,29 @@ in an environment variable or visible in `ps`). If you'd rather not store the
 password on disk at all, delete `~/.minerva_password` and just type it at each
 login — everything else still works.
 
-## Uninstall
+## Credentials & uninstall
+
+One command each — both ship as shell commands *and* installer flags, and both
+back up `~/.zshrc` and `~/.ssh/config` to timestamped `.minerva-bak.<stamp>`
+files before changing anything.
+
+**Forget saved credentials:**
 
 ```sh
-sed -i '' '/>>> minerva-setup >>>/,/<<< minerva-setup <<</d' ~/.zshrc ~/.ssh/config
-rm -f ~/bin/minerva-mount.sh ~/.minerva_password
-rm -rf ~/.config/minerva
-# (optional) brew uninstall --cask fuse-t fuse-t-sshfs ; brew uninstall sshpass
+minerva-forget                 # remove the saved password only (settings stay)
+minerva-forget --all           # also wipe saved settings (username, mount paths) + SSH identity
+# from the repo, equivalently:  ./minerva-setup.sh --wipe-credentials [--all]
 ```
+
+**Remove the whole setup** (restores your shell to how it was):
+
+```sh
+minerva-uninstall              # remove managed blocks, mount script, password, config
+minerva-uninstall --purge      # also offer to uninstall the brew deps (sshpass, FUSE-T)
+# from the repo, equivalently:  ./minerva-setup.sh --uninstall [--purge]
+```
+
+Both leave your Homebrew packages alone unless you pass `--purge` and confirm.
 
 ## Troubleshoot
 
