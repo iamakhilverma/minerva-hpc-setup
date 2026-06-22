@@ -131,13 +131,13 @@ if [[ "$MODE" == "forget" ]]; then
   if (( FORGET_ALL )); then
     warn "This removes the saved password AND saved settings (username, mount paths),"
     warn "and the SSH identity block. The mount tooling stays installed."
-    yesno "Proceed? [y/N]:" "N" || die "Aborted."
+    yesno "Proceed? [y/n]:" "N" || die "Aborted."
     rm -f "$PWFILE"; ok "Removed saved password."
     rm -rf "$HOME/.config/minerva"; ok "Removed saved settings (minerva.conf)."
     backup_once "$HOME/.ssh/config"; remove_block "$HOME/.ssh/config"; ok "Removed SSH identity block."
     info "Re-run ./minerva-setup.sh to reconfigure."
   else
-    yesno "Remove the saved Minerva password? [y/N]:" "N" || die "Aborted."
+    yesno "Remove the saved Minerva password? [y/n]:" "N" || die "Aborted."
     rm -f "$PWFILE"; ok "Removed saved password ($PWFILE)."
     info "Settings kept. Re-run ./minerva-setup.sh (or minerva-update-password) to set a new one."
   fi
@@ -148,7 +148,7 @@ if [[ "$MODE" == "uninstall" ]]; then
   bold "Uninstall Minerva tooling"
   info "Removes: ~/.zshrc & ~/.ssh/config managed blocks, ~/bin/minerva-mount.sh,"
   info "         $PWFILE, ~/.config/minerva/  (backups of the two configs are kept)."
-  yesno "Proceed? [y/N]:" "N" || die "Aborted."
+  yesno "Proceed? [y/n]:" "N" || die "Aborted."
   [[ -x "$HOME/bin/minerva-mount.sh" ]] && "$HOME/bin/minerva-mount.sh" clear >/dev/null 2>&1 || true
   backup_once "$HOME/.zshrc"; backup_once "$HOME/.ssh/config"
   remove_block "$HOME/.zshrc"
@@ -159,7 +159,7 @@ if [[ "$MODE" == "uninstall" ]]; then
   info "Backups: ~/.zshrc.minerva-bak.$STAMP, ~/.ssh/config.minerva-bak.$STAMP"
   if (( PURGE )); then
     echo
-    if yesno "Also remove Homebrew deps sshpass + FUSE-T? [y/N]:" "N"; then
+    if yesno "Also remove Homebrew deps sshpass + FUSE-T? [y/n]:" "N"; then
       brew uninstall sshpass >/dev/null 2>&1 || true
       brew uninstall --cask fuse-t-sshfs fuse-t >/dev/null 2>&1 || true
       ok "Removed brew deps (where present)."
@@ -213,7 +213,7 @@ fi
 KEEP_PW=0
 if [[ -s "$PWFILE" ]]; then
   if (( USE_DEFAULTS )); then KEEP_PW=1; ok "Keeping saved password (••••••••)"
-  elif yesno "Saved password found (••••••••). Keep it? [Y/n]:" "Y"; then KEEP_PW=1; ok "Keeping saved password."
+  elif yesno "Saved password found (••••••••). Keep it? [y/n]:" "Y"; then KEEP_PW=1; ok "Keeping saved password."
   fi
 fi
 if (( ! KEEP_PW )); then
@@ -241,10 +241,10 @@ echo; bold "Scratch mount (optional)"
 info "Minerva scratch is always /sc/arion/scratch/<username>."
 SMOUNT=""; SREMOTE=""
 # Default to No only if a prior config exists but had no scratch (respect that
-# earlier choice); otherwise default Yes. Label marks the non-default in lowercase.
-if [[ -r "$CONF" && -z "$PRIOR_SCRATCH" ]]; then _scratch_def="N"; _scratch_label="[y/N]"
-else _scratch_def="Y"; _scratch_label="[Y/n]"; fi
-if yesno "Also set up a scratch mount? ${_scratch_label}:" "$_scratch_def"; then
+# earlier choice); otherwise default Yes. (Casing is uniform repo-wide; the coded
+# default below — not the label — decides what an empty Enter does.)
+if [[ -r "$CONF" && -z "$PRIOR_SCRATCH" ]]; then _scratch_def="N"; else _scratch_def="Y"; fi
+if yesno "Also set up a scratch mount? [y/n]:" "$_scratch_def"; then
   ask SMOUNT "Local mountpoint for scratch" "${PRIOR_SCRATCH:-$HOME/minerva-scratch}"
   SREMOTE="/sc/arion/scratch/$MUSER/"
   info "scratch remote → $SREMOTE"
@@ -260,7 +260,7 @@ info "login persists:  ${MPERSIST}h"
 info "files touched:   ~/.ssh/config, ~/.zshrc, ~/bin/minerva-mount.sh, ~/.config/minerva/minerva.conf"
 info "                 (~/.zshrc and ~/.ssh/config backed up to .minerva-bak.$STAMP first)"
 if (( ! USE_DEFAULTS )); then
-  read -r -p "Proceed? [Y/n]: " GO || true
+  read -r -p "Proceed? [y/n]: " GO || true
   [[ "${GO:-Y}" =~ ^[Yy]?$ ]] || die "Aborted."
 fi
 
@@ -420,8 +420,8 @@ _minerva_strip() {
 # Forget saved credentials. --all also wipes settings + SSH identity (tooling stays).
 minerva-forget() {
   local all=0; [ \"\${1:-}\" = '--all' ] && all=1
-  if [ \$all -eq 1 ]; then printf 'Remove saved password AND settings (username, mount paths)? [y/N]: '
-  else printf 'Remove the saved Minerva password? [y/N]: '; fi
+  if [ \$all -eq 1 ]; then printf 'Remove saved password AND settings (username, mount paths)? [y/n]: '
+  else printf 'Remove the saved Minerva password? [y/n]: '; fi
   local r; read -r r; case \"\$r\" in [Yy]*) ;; *) echo 'Aborted.'; return 1;; esac
   rm -f \"\${MINERVA_PWFILE:-\$HOME/.minerva_password}\"; echo 'Removed saved password.'
   if [ \$all -eq 1 ]; then
@@ -435,7 +435,7 @@ minerva-forget() {
 # --purge also offers to remove the Homebrew deps.
 minerva-uninstall() {
   local purge=0; [ \"\${1:-}\" = '--purge' ] && purge=1
-  printf 'Remove ALL Minerva tooling and restore your shell/ssh config? [y/N]: '
+  printf 'Remove ALL Minerva tooling and restore your shell/ssh config? [y/n]: '
   local r; read -r r; case \"\$r\" in [Yy]*) ;; *) echo 'Aborted.'; return 1;; esac
   \"\$HOME/bin/minerva-mount.sh\" clear >/dev/null 2>&1
   local s; s=\$(date +%Y%m%d%H%M%S)
@@ -445,7 +445,7 @@ minerva-uninstall() {
   rm -f \"\$HOME/bin/minerva-mount.sh\" \"\${MINERVA_PWFILE:-\$HOME/.minerva_password}\"
   rm -rf \"\$HOME/.config/minerva\"
   if [ \$purge -eq 1 ]; then
-    printf 'Also remove Homebrew deps sshpass + FUSE-T? [y/N]: '; local p; read -r p
+    printf 'Also remove Homebrew deps sshpass + FUSE-T? [y/n]: '; local p; read -r p
     case \"\$p\" in [Yy]*) brew uninstall sshpass >/dev/null 2>&1; brew uninstall --cask fuse-t-sshfs fuse-t >/dev/null 2>&1; echo 'Removed brew deps.';; *) echo 'Kept brew deps.';; esac
   fi
   _minerva_strip \"\$HOME/.zshrc\"

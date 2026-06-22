@@ -68,7 +68,7 @@ if (( ${#need[@]} )); then
   info "Missing: ${need[*]}"
   info "Install command:  $cmd"
   do_install=1
-  if (( ! USE_DEFAULTS )); then read -r -p "Run it now (needs sudo)? [Y/n]: " a || true; [[ "${a:-Y}" =~ ^[Yy]?$ ]] || do_install=0; fi
+  if (( ! USE_DEFAULTS )); then read -r -p "Run it now (needs sudo)? [y/n]: " a || true; [[ "${a:-Y}" =~ ^[Yy]?$ ]] || do_install=0; fi
   if (( do_install )); then
     if sudo apt-get update -y && sudo apt-get install -y "${need[@]}"; then
       command -v sshpass >/dev/null 2>&1 && HAVE_SSHPASS=1
@@ -112,7 +112,7 @@ echo; bold "About to apply:"
 info "username:       $MUSER";          info "mountpoint:     $MMOUNT"
 info "remote path:    ${MREMOTE:-<your Minerva home>}"; info "login persists: ${MPERSIST}h"
 info "files touched:  ~/.ssh/config, ~/.bashrc and/or ~/.zshrc, ~/.local/bin/minerva-mount.sh, ~/.config/minerva/minerva.conf"
-if (( ! USE_DEFAULTS )); then read -r -p "Proceed? [Y/n]: " GO || true; [[ "${GO:-Y}" =~ ^[Yy]?$ ]] || die "Aborted."; fi
+if (( ! USE_DEFAULTS )); then read -r -p "Proceed? [y/n]: " GO || true; [[ "${GO:-Y}" =~ ^[Yy]?$ ]] || die "Aborted."; fi
 
 # ---- write config (fail fast with guidance if ~/.config or ~/.local is root-owned) --
 echo; bold "Writing config"
