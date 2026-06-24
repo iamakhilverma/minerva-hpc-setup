@@ -73,6 +73,25 @@ minerva-mount    # mount ~/minerva (reuses that master)
 minerva-status   # HEALTHY?  Then browse ~/minerva in Finder.
 ```
 
+## Retrofit an existing (older) install
+
+If a machine was set up with an older version — especially one whose `~/.zshrc` was
+hand-edited (no `# >>> minerva-setup >>>` markers, so re-running the installer would
+just *append* a second block) — use the retrofit helper. It converts `sshpass` login
+aliases to plain `ssh`, drops the stored password and `NumberOfPasswordPrompts 2`,
+installs the no-`reconnect` / `BatchMode` mount script, and reaps any old reconnect
+mounts. It backs up every file it touches (`<file>.minerva-bak.<stamp>`) and is safe
+to re-run.
+
+```sh
+cd minerva-hpc-setup
+git pull                              # get the fixed scripts first
+./fix-existing-install.sh --dry-run   # preview every change, touch nothing
+./fix-existing-install.sh             # apply  (--keep-mounts leaves active mounts up)
+```
+
+Then open a new terminal so the plain-`ssh` aliases load.
+
 ## Mount a second directory
 
 Working in two places at once? Pass a mountpoint + remote path to mount another
