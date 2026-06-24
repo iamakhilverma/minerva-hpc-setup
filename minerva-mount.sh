@@ -205,8 +205,16 @@ if [[ -z "$NODE" ]]; then
 fi
 print -- "mounting via live master on $NODE (remote: '${REMOTE_PATH:-<home>}')"
 
+# ssh_command pins sshfs to the EXISTING ControlMaster and never lets it start a
+# fresh login: ControlMaster=no = reuse-only, BatchMode=yes = never prompt/retry
+# auth (so if the master is gone, ssh exits instantly without sending a password
+# attempt). We deliberately do NOT pass -o reconnect: with reconnect, a dropped
+# connection (sleep/Wi-Fi/master expiry) made sshfs re-auth in the background on
+# every filesystem poke — with no way to satisfy Duo/MFA — spraying the server
+# with failed-login attempts. Without it, a dead mount just goes stale; rerun
+# `minerva-mount` (which only mounts when a live master exists) to restore it.
 "$SSHFS" "${NODE}:${REMOTE_PATH}" "$MOUNT" \
-  -o reconnect \
+  -o ssh_command="ssh -o BatchMode=yes -o ControlMaster=no" \
   -o defer_permissions \
   -o noappledouble \
   -o volname="$(basename "$MOUNT")" \

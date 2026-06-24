@@ -1,16 +1,21 @@
 #!/usr/bin/env bash
 # minerva-setup.sh — set up Minerva (Sinai HPC) convenience tooling on a Mac.
 #
-# Installs, for the CURRENT user (prompts for their own credentials):
-#   * sshpass + FUSE-T (via Homebrew; Apple Silicon and Intel both supported)
+# Installs, for the CURRENT user:
+#   * FUSE-T (via Homebrew; Apple Silicon and Intel both supported)
 #   * ~/.ssh/config block: host aliases minerva, minerva11..14; X11; an N-hour
 #     passwordless ControlMaster window
-#   * ~/.minerva_password (mode 0600) — their SSO password, fed to logins by sshpass
 #   * ~/.config/minerva/minerva.conf — all tunable settings
 #   * ~/bin/minerva-mount.sh — the on-demand FUSE-T mount manager
 #   * ~/.zshrc block: minerva / minerva11..14 (login), minerva-mount/-status/-clear,
-#     minerva-scratch, rsync helpers (mpull/mpush/mget/mput), minerva-update-password,
+#     minerva-scratch, rsync helpers (mpull/mpush/mget/mput),
 #     minerva-forget, minerva-uninstall
+#
+# Auth model: plain ssh + an N-hour ControlMaster. You type your SSO password and
+# approve the Duo push ONCE per window; everything else reuses the live master. We
+# do NOT use sshpass or store your password — that kept your SSO password in
+# cleartext and, because sshpass cannot answer Duo/MFA, sprayed the server with
+# background failed-login attempts.
 #
 # Idempotent: re-running replaces the managed blocks in place AND reuses your saved
 # settings as defaults (username, mount paths, persist hours, password) so you don't
@@ -138,8 +143,8 @@ if [[ "$MODE" == "forget" ]]; then
     info "Re-run ./minerva-setup.sh to reconfigure."
   else
     yesno "Remove the saved Minerva password? [y/n]:" "N" || die "Aborted."
-    rm -f "$PWFILE"; ok "Removed saved password ($PWFILE)."
-    info "Settings kept. Re-run ./minerva-setup.sh (or minerva-update-password) to set a new one."
+    rm -f "$PWFILE"; ok "Removed legacy cleartext password file ($PWFILE)."
+    info "Settings kept. (Logins no longer use a stored password — plain ssh + ControlMaster.)"
   fi
   exit 0
 fi
@@ -208,22 +213,10 @@ else
 fi
 [[ -n "$MUSER" ]] || die "Username is required."
 
-# Password: reuse the saved one if present (shown fixed-width masked — never the
-# length or characters). Otherwise prompt twice, hidden.
-KEEP_PW=0
-if [[ -s "$PWFILE" ]]; then
-  if (( USE_DEFAULTS )); then KEEP_PW=1; ok "Keeping saved password (••••••••)"
-  elif yesno "Saved password found (••••••••). Keep it? [y/n]:" "Y"; then KEEP_PW=1; ok "Keeping saved password."
-  fi
-fi
-if (( ! KEEP_PW )); then
-  while :; do
-    read -r -s -p "Sinai SSO password: " PW1; echo
-    read -r -s -p "Confirm password:   " PW2; echo
-    [[ -n "$PW1" ]] || { warn "Empty — try again."; continue; }
-    [[ "$PW1" == "$PW2" ]] || { warn "Did not match — try again."; continue; }
-    break
-  done
+# No password is stored: auth is plain ssh + the ControlMaster window. If a prior
+# install left a cleartext password file behind, remove it now.
+if [[ -e "$PWFILE" ]]; then
+  rm -f "$PWFILE" && ok "Removed legacy cleartext password file ($PWFILE)"
 fi
 
 echo; bold "Settings (press Enter to accept the default)"
@@ -252,7 +245,7 @@ fi
 
 echo; bold "About to apply:"
 info "username:        $MUSER"
-info "password:        $([[ $KEEP_PW -eq 1 ]] && echo 'kept (••••••••)' || echo 'new (••••••••)')  → $PWFILE (0600)"
+info "auth:            plain ssh + ${MPERSIST}h ControlMaster (no stored password)"
 info "mountpoint:      $MMOUNT"
 info "remote path:     ${MREMOTE:-<your Minerva home>}"
 info "scratch mount:   ${SMOUNT:-<none>}${SMOUNT:+  ←  $SREMOTE}"
@@ -266,20 +259,10 @@ fi
 
 # ---- dependencies -----------------------------------------------------------
 echo; bold "Installing dependencies"
-HAVE_SSHPASS=0
-if command -v sshpass >/dev/null 2>&1; then HAVE_SSHPASS=1; ok "sshpass present"
-else
-  info "installing sshpass…"
-  if brew install sshpass 2>/dev/null \
-     || brew install hudochenkov/sshpass/sshpass 2>/dev/null \
-     || brew install esolitos/ipa/sshpass 2>/dev/null; then
-    HAVE_SSHPASS=1; ok "sshpass installed"
-  else
-    warn "Could not install sshpass automatically — continuing without it."
-    warn "Logins will prompt for your password (once per ${MPERSIST}h ControlMaster window)."
-    warn "  brew install sshpass   # then re-run ./minerva-setup.sh"
-  fi
-fi
+# sshpass is intentionally NOT installed or used: it stored the SSO password in
+# cleartext and could not satisfy Duo/MFA, which generated background failed-login
+# attempts. Logins are plain ssh — you type your password once per ControlMaster
+# window, then approve the Duo push.
 HAVE_SSHFS=0
 if command -v sshfs >/dev/null 2>&1 || [[ -x "$BREW_PREFIX/bin/sshfs" ]]; then HAVE_SSHFS=1; ok "FUSE-T sshfs present"
 else
@@ -305,13 +288,6 @@ mkdir -p "$HOME/bin" "$HOME/.ssh/sockets" "$MMOUNT"
 [[ -n "$SMOUNT" ]] && mkdir -p "$SMOUNT"
 chmod 700 "$HOME/.ssh/sockets"
 
-# ---- secrets ----------------------------------------------------------------
-if (( ! KEEP_PW )) && [[ -n "${PW1:-}" ]]; then
-  ( umask 077; printf '%s\n' "$PW1" >"$PWFILE" ); chmod 600 "$PWFILE"
-  ok "password saved to $PWFILE (0600)"
-fi
-unset PW1 PW2 || true
-
 # ---- config file ------------------------------------------------------------
 cat >"$CONF" <<EOF
 # Minerva tooling settings — edit freely, then open a new shell.
@@ -323,7 +299,6 @@ MINERVA_SCRATCH_REMOTE="$SREMOTE"
 MINERVA_PERSIST="$MPERSIST"
 MINERVA_NODES=(minerva13 minerva11 minerva12 minerva14 minerva)
 MINERVA_LOG="\$HOME/Library/Logs/minerva-mount.log"
-MINERVA_PWFILE="$PWFILE"
 EOF
 ok "wrote ~/.config/minerva/minerva.conf"
 
@@ -340,7 +315,7 @@ Host minerva*
     ForwardX11 yes
     ForwardX11Trusted yes
     PreferredAuthentications keyboard-interactive,password
-    NumberOfPasswordPrompts 2
+    NumberOfPasswordPrompts 1
     PasswordAuthentication yes
     ControlMaster auto
     ControlPath ~/.ssh/sockets/%r@%h-%p
@@ -350,24 +325,17 @@ write_block "$HOME/.ssh/config" "$SSH_BLOCK"; chmod 600 "$HOME/.ssh/config"
 ok "updated ~/.ssh/config (User $MUSER, ControlPersist ${MPERSIST}h)"
 
 # ---- zshrc ------------------------------------------------------------------
-if (( HAVE_SSHPASS )); then
-  LOGIN_ALIASES="# Log in (password auto-fed via sshpass; approve the MFA push on your phone).
-alias minerva='sshpass -f \"\$MINERVA_PWFILE\" ssh -Y minerva'
-alias minerva11='sshpass -f \"\$MINERVA_PWFILE\" ssh -Y minerva11'
-alias minerva12='sshpass -f \"\$MINERVA_PWFILE\" ssh -Y minerva12'
-alias minerva13='sshpass -f \"\$MINERVA_PWFILE\" ssh -Y minerva13'
-alias minerva14='sshpass -f \"\$MINERVA_PWFILE\" ssh -Y minerva14'"
-else
-  LOGIN_ALIASES="# Log in (type your password when asked — once per ControlMaster window; then MFA).
+# Plain ssh — type your SSO password ONCE per ControlMaster window, then approve
+# the Duo push. (No sshpass: it stored the SSO password in cleartext and could not
+# answer Duo/MFA, which produced background failed-login attempts.)
+LOGIN_ALIASES="# Log in (type your password once per ControlMaster window; then approve Duo).
 alias minerva='ssh -Y minerva'
 alias minerva11='ssh -Y minerva11'
 alias minerva12='ssh -Y minerva12'
 alias minerva13='ssh -Y minerva13'
 alias minerva14='ssh -Y minerva14'"
-fi
 ZSHRC_BLOCK="# Minerva (Sinai HPC) — managed by minerva-setup.sh. Settings: ~/.config/minerva/minerva.conf
 [ -r \"\$HOME/.config/minerva/minerva.conf\" ] && source \"\$HOME/.config/minerva/minerva.conf\"
-: \"\${MINERVA_PWFILE:=\$HOME/.minerva_password}\"
 
 $LOGIN_ALIASES
 
@@ -400,14 +368,6 @@ mpull() { rsync -avh --progress \"\$MINERVA_BASE/\$1\" \"\$2\"; }
 mpush() { rsync -avh --progress \"\$1\" \"\$MINERVA_BASE/\$2\"; }
 alias mput='scp -r'
 alias mget='scp -r'
-
-minerva-update-password() {
-  local newpw
-  printf 'New Minerva password: '; read -rs newpw; printf '\\n'
-  [ -z \"\$newpw\" ] && { echo 'Aborted (empty).'; return 1; }
-  ( umask 077; printf '%s\\n' \"\$newpw\" > \"\$MINERVA_PWFILE\" ); chmod 600 \"\$MINERVA_PWFILE\"
-  echo \"Updated \$MINERVA_PWFILE.\"
-}
 
 # Remove the marker-delimited block from a file. Match the FULL marker lines
 # exactly (this function's own body mentions the markers, so a substring range
@@ -474,4 +434,4 @@ fi
 echo
 info "Diagnose: minerva-status   •   Recover a wedged mount: minerva-clear"
 info "Forget password: minerva-forget [--all]   •   Remove everything: minerva-uninstall [--purge]"
-info "Change settings:  edit ~/.config/minerva/minerva.conf   •   New password: minerva-update-password"
+info "Change settings:  edit ~/.config/minerva/minerva.conf"

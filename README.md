@@ -18,9 +18,11 @@ It prompts **you** for your own username and password; nothing is baked in.
 
 ## What you get
 
-- `minerva`, `minerva11`–`minerva14` — one-command SSH login (password auto-fed
-  via `sshpass`; you still approve the MFA push on your phone). The first login
-  opens a passwordless `ControlMaster` window (default 8h).
+- `minerva`, `minerva11`–`minerva14` — one-command SSH login. You type your SSO
+  password **once per 8h window** and approve the MFA push; the first login opens a
+  passwordless `ControlMaster` window that keeps every later login/mount/rsync
+  password-free until it expires. No `sshpass`, no stored password — see
+  [Security](#security).
 - `minerva-mount` / `minerva-status` / `minerva-clear` — an **on-demand** FUSE-T
   mount of your Minerva tree at `~/minerva`, with a phantom-proof health check
   (`status` never touches the filesystem, so it can't hang; `clear` recovers a
@@ -28,15 +30,14 @@ It prompts **you** for your own username and password; nothing is baked in.
   **and** your scratch mount (if you set one up).
 - `minerva-scratch` — mount just your scratch tree (`/sc/arion/scratch/<you>`).
 - `mpull` / `mpush` / `mput` / `mget` — rsync/scp helpers against your tree.
-- `minerva-update-password` — rotate the saved password.
-- `minerva-forget` / `minerva-uninstall` — wipe saved credentials, or remove the
+- `minerva-forget` / `minerva-uninstall` — clear any legacy saved files, or remove the
   whole setup and restore your shell (see [Credentials & uninstall](#credentials--uninstall)).
 
 ## Requirements
 
-- macOS with [Homebrew](https://brew.sh) installed. Everything else (`sshpass`,
-  FUSE-T) is installed for you — and if a dependency can't be installed, the setup
-  continues anyway (logins still work; only the mount needs FUSE-T).
+- macOS with [Homebrew](https://brew.sh) installed. FUSE-T is installed for you —
+  and if it can't be installed, the setup continues anyway (logins still work; only
+  the mount needs FUSE-T).
 - A Sinai HPC (Minerva) account with SSO password + MFA (MS Authenticator).
 
 ## Install
@@ -46,7 +47,7 @@ git clone https://github.com/iamakhilverma/minerva-hpc-setup.git
 cd minerva-hpc-setup
 ./minerva-setup.sh            # interactive — prompts for everything
 # or:
-./minerva-setup.sh --defaults # accept all recommended defaults (still prompts for username + password)
+./minerva-setup.sh --defaults # accept all recommended defaults (still prompts for username)
 ```
 
 You'll be asked for (recommended defaults in brackets):
@@ -54,16 +55,14 @@ You'll be asked for (recommended defaults in brackets):
 | Prompt | Default | Notes |
 | --- | --- | --- |
 | Sinai HPC username | *last used* | required first time, e.g. `smithj01` |
-| SSO password | *kept if saved* | entered twice, hidden; saved to `~/.minerva_password` (mode 0600) |
 | Local mountpoint | `~/minerva` | where the Finder mount appears |
 | Remote path | *your Minerva home* | blank = home dir, or a lab path like `/sc/arion/projects/Smith_Lab/users/jdoe` (form: `/sc/arion/projects/<lab>/users/<you>`) |
 | Scratch mount | `~/minerva-scratch` | optional; remote is derived as `/sc/arion/scratch/<you>` — you only pick the local folder |
 | Login persists | `8` hours | the passwordless `ControlMaster` window |
 
 **Re-running is smart:** the installer detects a previous setup and offers your
-saved values back as defaults — press Enter to keep each, including a saved
-password (shown fixed-width masked, never its length or characters). Before it
-edits `~/.zshrc` and `~/.ssh/config` it backs them up to timestamped
+saved values back as defaults — press Enter to keep each. Before it edits
+`~/.zshrc` and `~/.ssh/config` it backs them up to timestamped
 `.minerva-bak.<stamp>` files, so any change is reversible.
 
 Then open a new terminal and:
@@ -107,15 +106,23 @@ alias minerva-crc='minerva-mount ~/minerva-crc /sc/arion/projects/Smith_Lab/user
 - **Any setting:** edit `~/.config/minerva/minerva.conf`, then open a new shell.
 - **Persist hours / username:** re-run `./minerva-setup.sh`, or edit the
   `~/.ssh/config` block directly.
-- **New password:** `minerva-update-password`.
 
 ## Security
 
-Your password is stored at `~/.minerva_password`, readable only by you (mode 0600),
-and never leaves the machine. `sshpass -f` reads it from that file (it isn't placed
-in an environment variable or visible in `ps`). If you'd rather not store the
-password on disk at all, delete `~/.minerva_password` and just type it at each
-login — everything else still works.
+**No password is stored.** Logins are plain `ssh`: you type your SSO password once
+per `ControlMaster` window and approve the Duo push; nothing is written to disk and
+nothing is visible in `ps`. Earlier versions auto-fed the password with `sshpass`
+from `~/.minerva_password` — that kept your SSO password in cleartext **and**,
+because `sshpass` can't answer Duo/MFA (and fed a blank password whenever the
+variable was empty), generated background **failed-login attempts** that trip HPC
+lockout/abuse alarms. Both are gone.
+
+The mount is equally conservative: `sshfs` is pinned to your existing
+`ControlMaster` with `BatchMode=yes` and runs **without** `-o reconnect`, so it can
+**never** start a fresh login on its own. If the connection drops (sleep, Wi-Fi,
+master expiry) the mount just goes stale instead of retrying auth in the
+background — rerun `minerva-mount` (which only mounts when a live master exists) to
+restore it.
 
 ## Credentials & uninstall
 
@@ -126,7 +133,7 @@ files before changing anything.
 **Forget saved credentials:**
 
 ```sh
-minerva-forget                 # remove the saved password only (settings stay)
+minerva-forget                 # remove any legacy saved-password file (settings stay)
 minerva-forget --all           # also wipe saved settings (username, mount paths) + SSH identity
 # from the repo, equivalently:  ./minerva-setup.sh --wipe-credentials [--all]
 ```
@@ -134,8 +141,8 @@ minerva-forget --all           # also wipe saved settings (username, mount paths
 **Remove the whole setup** (restores your shell to how it was):
 
 ```sh
-minerva-uninstall              # remove managed blocks, mount script, password, config
-minerva-uninstall --purge      # also offer to uninstall the brew deps (sshpass, FUSE-T)
+minerva-uninstall              # remove managed blocks, mount script, config (+ any legacy password file)
+minerva-uninstall --purge      # also offer to uninstall the brew deps (FUSE-T)
 # from the repo, equivalently:  ./minerva-setup.sh --uninstall [--purge]
 ```
 
@@ -146,9 +153,10 @@ Both leave your Homebrew packages alone unless you pass `--purge` and confirm.
 - *"Not writable by you" / "Permission denied"* (e.g. `~/.config`, `~/.zshrc`) →
   files in your home are owned by `root` (something ran under `sudo`). The installer
   detects this upfront. Fix it all at once, then re-run: `sudo chown -R "$(whoami)" ~`
-- *"Could not install sshpass"* → it's optional. The installer falls back to
-  plain `ssh` logins (you type your password once per session). To get auto-fill,
-  run `brew install sshpass` (it's in homebrew-core now) and re-run the installer.
+- **Too many failed logins / HPC abuse warning?** Make sure no machine still runs
+  the old `sshpass` aliases or an `sshfs … -o reconnect` mount: `pgrep -fl sshpass`
+  and `pgrep -fl 'sshfs.*reconnect'` should both be empty. Re-run `./minerva-setup.sh`
+  to install the current (plain-`ssh`, no-reconnect) tooling.
 - `minerva-mount` says *"no live Minerva SSH master"* → log into a node first
   (`minerva13`), then `minerva-mount`. Mounting is on-demand by design.
 - `~/minerva` looks stuck → `minerva-status` (safe, never hangs). If `PHANTOM`,
