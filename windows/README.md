@@ -1,12 +1,33 @@
 # Minerva on native Windows — Explorer drive (variant B)
 
-> ⚠️ **UNTESTED DRAFT as of 2026-06-01.** This is a guide, not an automated
-> installer, and it has real caveats (below). Verify on your machine before
-> relying on it. For terminal-only use, the WSL2 route ([`../linux/`](../linux/))
-> is simpler and more faithful to the Mac setup.
+> ⚠️ **UNTESTED DRAFT.** This has real caveats (below). Verify on your machine
+> before relying on it. For terminal-only use, the WSL2 route
+> ([`../linux/`](../linux/)) is simpler and more faithful to the Mac setup.
 
 Goal: mount your Minerva tree as a **drive letter visible in Windows Explorer**
 (the closest analog to the macOS Finder mount), using **WinFsp + SSHFS-Win**.
+
+## Automated setup (untested draft)
+
+[`minerva-setup-windows.ps1`](minerva-setup-windows.ps1) mirrors the macOS/Linux
+installers as far as native Windows allows: it saves your settings to a JSON
+config and **reuses them as defaults** on re-run, optionally sets up a **scratch
+drive** (remote derived as `/sc/arion/scratch/<you>`), and writes
+`minerva-mount` / `minerva-clear` / `minerva-status` / `minerva-scratch` /
+`minerva-forget` / `minerva-uninstall` into your PowerShell profile (backed up
+first). Install WinFsp + SSHFS-Win (below) first, then:
+
+```powershell
+# you may need:  Set-ExecutionPolicy -Scope Process -Bypass
+.\minerva-setup-windows.ps1                 # interactive (reuses saved values)
+.\minerva-setup-windows.ps1 -Uninstall      # remove profile block + config, dismount drives
+```
+
+> ⚠️ This `.ps1` has **not been run or syntax-checked** on a Windows machine
+> (it was authored on macOS, where no PowerShell was available to validate it).
+> It inherits the caveats below — most importantly there is **no saved password
+> and no 8-hour window**; each `minerva-mount` authenticates on its own. The
+> manual steps below remain the reliable reference.
 
 ## 1. Install WinFsp + SSHFS-Win
 
