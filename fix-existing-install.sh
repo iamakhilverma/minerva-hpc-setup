@@ -178,8 +178,11 @@ elif (( KEEP_MOUNTS )); then
 else
   warn "${#recon_pids[@]} reconnect mount(s) found — these are what spray failed logins."
   for pid in "${recon_pids[@]}"; do
-    mp="$(ps -p "$pid" -o args= 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i ~ /^\//){print $i; exit}}')"
-    [[ -n "$mp" ]] || continue
+    # The mountpoint is the arg RIGHT AFTER the "host:path" remote (which contains a
+    # ':'). Don't grab the first "/…" token — that catches the sshfs binary path
+    # (e.g. /usr/local/bin/sshfs) and the reap then misses the real mount.
+    mp="$(ps -p "$pid" -o args= 2>/dev/null | awk '{for(i=1;i<=NF;i++) if($i ~ /:/){print $(i+1); exit}}')"
+    [[ -n "$mp" && "$mp" == /* ]] || { warn "couldn't parse mountpoint for pid $pid — clear it by hand"; continue; }
     if (( DRY_RUN )); then
       note "would force-unmount + reap: $mp (pid $pid)"
     else
