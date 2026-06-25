@@ -198,7 +198,11 @@ fi
 # ---- summary / verify -------------------------------------------------------
 echo; bold "Result"
 if (( DRY_RUN )); then
-  info "Dry run only — nothing was changed. Re-run without --dry-run to apply."
+  if (( CHANGED )); then
+    info "Dry run: changes ARE pending (shown above). Re-run without --dry-run to apply them."
+  else
+    ok "Nothing to fix — this machine is already on the no-storm design. (dry run)"
+  fi
   exit 0
 fi
 if (( ! CHANGED )); then
