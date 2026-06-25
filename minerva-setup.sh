@@ -341,6 +341,10 @@ $LOGIN_ALIASES
 
 # Mount management (on-demand — run AFTER you've logged into a node).
 # With no args, minerva-mount brings up the primary mount and, if configured, scratch.
+# Drop any older alias-based definitions first, so re-sourcing this file in a live
+# shell doesn't collide with the functions below (zsh expands an existing alias
+# while parsing \`name()\`, which is a parse error).
+unalias minerva-mount minerva-status minerva-clear minerva-scratch 2>/dev/null
 minerva-mount() {
   if [ \"\$#\" -gt 0 ]; then \"\$HOME/bin/minerva-mount.sh\" \"\$@\"; return; fi
   \"\$HOME/bin/minerva-mount.sh\"
