@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-06-29 — Add verify-install.sh
+
+- **`verify-install.sh`** — new read-only health check (changes nothing). Confirms a
+  machine is on the no-storm design after `minerva-setup.sh` / `fix-existing-install.sh`:
+  managed-block presence, installed mount script + config (incl. drift vs the repo
+  copy), SSH hardening (`NumberOfPasswordPrompts 1`, `ControlPersist`), no storm
+  leftovers (no real `sshpass`-wrapped ssh / password export / cleartext file /
+  `-o reconnect` mounts), and that `~/.zshrc` sources cleanly with `minerva-mount` a
+  function. Exits `0` when in order (warnings allowed), `1` on any hard failure;
+  reuses `fix-existing-install.sh`'s exact `sshpass` patterns so the two agree.
+
 ## 2026-06-25 — Stop the failed-login storm; make the mount auth-safe
 
 A background loop on the macOS clients was generating large bursts of failed SSH

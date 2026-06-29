@@ -92,6 +92,24 @@ git pull                              # get the fixed scripts first
 
 Then open a new terminal so the plain-`ssh` aliases load.
 
+## Verify your install
+
+After `minerva-setup.sh` (or the retrofit above), confirm the machine is on the
+no-storm design. `verify-install.sh` is **read-only** — it changes nothing and is
+safe to run anywhere. It checks the managed blocks, the installed mount script /
+config, the SSH hardening (`NumberOfPasswordPrompts 1`, `ControlPersist`), that no
+storm leftovers remain (no `sshpass`, cleartext password, or `-o reconnect` mounts),
+and that `~/.zshrc` sources cleanly.
+
+```sh
+cd minerva-hpc-setup
+git pull              # get the script first
+./verify-install.sh   # prints ✓ / ! / ✗ per check and a final verdict
+```
+
+It exits `0` when the install is in order (warnings allowed) and `1` if any hard
+check fails, then prints the manual single-Duo login test to round it off.
+
 ## Mount a second directory
 
 Working in two places at once? Pass a mountpoint + remote path to mount another
