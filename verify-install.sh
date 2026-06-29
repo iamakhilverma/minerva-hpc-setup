@@ -41,8 +41,11 @@ wrn()  { printf '\033[33m  ! %s\033[0m\n' "$*"; WARN=$((WARN+1)); }
 fail() { printf '\033[31m  ✗ %s\033[0m\n' "$*"; FAIL=$((FAIL+1)); }
 
 # Count managed-block opening markers in a file (0 = none, >1 = duplicated).
+# Match the marker as a WHOLE line (grep -x), not a substring: the .zshrc block body
+# embeds the marker strings inside the _minerva_strip uninstall helper, so a plain
+# substring match double-counts a single block (same trap remove_block warns about).
 # grep -c exits non-zero on 0 matches, so capture and default rather than `|| echo`.
-block_count() { local c; c="$(grep -cF "$BEGIN" "$1" 2>/dev/null)"; echo "${c:-0}"; }
+block_count() { local c; c="$(grep -cxF "$BEGIN" "$1" 2>/dev/null)"; echo "${c:-0}"; }
 
 bold "Minerva — verify install"
 
