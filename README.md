@@ -161,31 +161,6 @@ master expiry) the mount just goes stale instead of retrying auth in the
 background — rerun `minerva-mount` (which only mounts when a live master exists) to
 restore it.
 
-## Type your Minerva password with a hotkey (optional, macOS)
-
-You still authenticate interactively (password once per 8h `ControlMaster` window,
-plus Duo) — this just saves *typing* the password, and is handy for the SSO logins
-you hit elsewhere (VPN, web portals). It uses [Hammerspoon](https://www.hammerspoon.org/)
-plus the **macOS Keychain**, so the password stays encrypted at rest — it is **never**
-put in this repo, a dotfile, or Text Replacement (which would sync it to iCloud in
-cleartext, the very anti-pattern the Security section warns about).
-
-Chord: **⌃⌥⌘M** then **P** (M enters the Minerva mode, P types the Password; Esc
-cancels). It types into whatever window is focused, so aim it at a real `password:`
-prompt or login field — and keep FileVault on and your screen locked.
-
-```sh
-brew install --cask hammerspoon         # then: grant it Accessibility when prompted
-security add-generic-password -s minerva-sso -a "$USER" -w   # stores the password (prompted, hidden)
-mkdir -p ~/.hammerspoon
-printf 'dofile("%s/hammerspoon-minerva-password.lua")\n' "$PWD" >> ~/.hammerspoon/init.lua
-# Hammerspoon menu-bar icon → Reload Config
-```
-
-- **Change the password later:** `security add-generic-password -s minerva-sso -a "$USER" -w -U`
-- **Change the chord / auto-submit:** edit the CONFIG block in
-  `hammerspoon-minerva-password.lua`, then Reload Config.
-
 ## Credentials & uninstall
 
 One command each — both ship as shell commands *and* installer flags, and both
