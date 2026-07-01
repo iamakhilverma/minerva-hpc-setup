@@ -1,15 +1,13 @@
 # Changelog
 
-## 2026-07-01 — Optional password hotkey (Hammerspoon + Keychain)
+## 2026-07-01 — Move the password hotkey to mac-config
 
-- **`hammerspoon-minerva-password.lua`** — optional macOS convenience: a hotkey
-  chord (**⌃⌥⌘M** then **P**) that types your Minerva SSO password into the focused
-  window (ssh prompt, VPN, web logins). The password lives encrypted in the login
-  **Keychain** (`security add-generic-password -s minerva-sso`); it is never stored
-  in the repo or a dotfile, and the hotkey only fires on keypress — so it can't
-  drive a background login storm. Chord/auto-submit are configurable at the top of
-  the file. README documents install (Hammerspoon + Accessibility), storing/updating
-  the password, and rebinding.
+- Removed `hammerspoon-minerva-password.lua` and its README section. The optional
+  password-typing hotkey (⌃⌥⌘M then P, Keychain-backed) was briefly added here, but
+  it's generic macOS tooling with no Minerva login/mount logic, so it now lives in
+  the **`mac-config`** repo (per the "the two repos never overlap" rule). It defaults
+  to the same `minerva-sso` Keychain item, so nothing changes for the user — see
+  mac-config USAGE §10. No credentials were ever stored in this repo.
 
 ## 2026-06-29 — Add verify-install.sh
 
